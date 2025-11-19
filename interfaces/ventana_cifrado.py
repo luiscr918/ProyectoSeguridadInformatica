@@ -1,8 +1,14 @@
-"""INTERFAZ CIFRADO"""
+"""interfaces/ventana_cifrado.py"""
 
 import tkinter as tk
+import os
 from tkinter import filedialog, messagebox
-from functions.cifrado_simetrico import clave_desde_password, cifrar_archivo, descifrar_archivo
+from cryptography.fernet import InvalidToken
+from functions.cifrado_simetrico import (
+    clave_desde_password,
+    cifrar_archivo,
+    descifrar_archivo_bytes,
+)
 
 
 class VentanaCifrado:
@@ -14,114 +20,120 @@ class VentanaCifrado:
         # Crear nueva ventana
         self.root = tk.Toplevel()
         self.root.title("Cifrado Simétrico")
-        self.root.geometry("400x400")
+        self.root.geometry("450x420")
 
         self.archivo_seleccionado = None
-        self.clave = None
 
         titulo = tk.Label(self.root, text="Cifrado Simétrico", font=("Arial", 16))
-        titulo.pack(pady=20)
+        titulo.pack(pady=12)
 
         # BTN seleccionar archivo
         btn_sel = tk.Button(
             self.root, text="Seleccionar Archivo", command=self.seleccionar_archivo
         )
-        btn_sel.pack(pady=10)
-        # Entrada clave
+        btn_sel.pack(pady=8)
+
+        # Entrada clave (contraseña que el usuario escribe)
         tk.Label(self.root, text="Ingrese su clave o contraseña:").pack()
         self.entry_clave = tk.Entry(self.root, width=40, show="*")
         self.entry_clave.pack(pady=5)
-        # Mostrar salt generado
-        tk.Label(self.root, text="Salt (automático):").pack()
-        self.entry_salt = tk.Entry(self.root, width=40)
-        self.entry_salt.pack(pady=5)
 
-        # Botón cifrar
+        # Botones
         btn_cifrar = tk.Button(self.root, text="Cifrar Archivo", command=self.cifrar_ui)
         btn_cifrar.pack(pady=10)
 
-        # Botón descifrar
         btn_descifrar = tk.Button(
             self.root, text="Descifrar Archivo", command=self.descifrar_ui
         )
-        btn_descifrar.pack(pady=10)
+        btn_descifrar.pack(pady=6)
 
         # Botón para cerrar
         btn = tk.Button(self.root, text="Cerrar", command=self.root.destroy)
-        btn.pack(pady=20)
+        btn.pack(pady=18)
 
     # metodos UI
     def seleccionar_archivo(self):
         """
-        Metodo para abrir archivo(se conecta con la funcion que hace el proceso)
+        metodo para seleccionar archivos
         """
         ruta = filedialog.askopenfilename()
         if ruta:
             self.archivo_seleccionado = ruta
             messagebox.showinfo("Archivo", f"Archivo seleccionado:\n{ruta}")
 
-    def obtener_clave_derivada(self):
-        """
-        Metodo para generar clave del cifrado(se conecta con la funcion que hace el proceso)
-        """
-        password=self.entry_clave.get()
-        
-        if not password:
-            messagebox.showerror("Error","Debe ingresar una clave primero.")
-            return None
-        #salt
-        if not self.salt:
-            self.salt= os.urandom(16)
-            self.entry_salt.delete(0, tk.END)
-            self.entry_salt.insert(0, self.salt.hex())
-        return clave_desde_password(password,self.sal)
-
-
     def cifrar_ui(self):
         """
-        Metodo para cifrar el archivo(se conecta con la funcion que hace el proceso)
+        Método para cifrar archivos
         """
-        if not self.archivo_seleccionado or not self.clave:
-            messagebox.showerror("Error", "Selecciona archivo y genera clave primero.")
-            return
-        clave=self.obtener_clave_derivada()
-        if not clave:
+        if not self.archivo_seleccionado:
+            messagebox.showerror("Error", "Seleccione un archivo primero.")
             return
 
-        datos_cifrados = cifrar_archivo(self.archivo_seleccionado, self.clave)
+        password = self.entry_clave.get()
+        if not password:
+            messagebox.showerror("Error", "Ingrese una contraseña.")
+            return
+        # Generar salt automáticamente
+        salt = os.urandom(16)
+
+        # Derivar clave Fernet desde password + salt
+        clave_fernet = clave_desde_password(password, salt)
+        try:
+            datos_cifrados = cifrar_archivo(self.archivo_seleccionado, clave_fernet)
+        except (OSError, ValueError) as e:
+            messagebox.showerror("Error", f"Error cifrando archivo: {e}")
+            return
 
         ruta_salida = filedialog.asksaveasfilename(
             title="Guardar archivo cifrado",
             defaultextension=".enc",
             filetypes=[("Encrypted", "*.enc"), ("Todos", "*.*")],
         )
-
         if ruta_salida:
             with open(ruta_salida, "wb") as f:
-                f.write(self.salt + datos_cifrados) #guardaremos en salt el archivo
-            messagebox.showinfo("Éxito", "Archivo cifrado guardado correctamente.")
+                f.write(salt + datos_cifrados)
+            messagebox.showinfo(
+                "Éxito",
+                "Archivo cifrado correctamente.\n"
+                "Recuerde su contraseña, la necesitará para descifrar.",
+            )
 
     def descifrar_ui(self):
         """
-        Metodo para descifrar el  archivo(se conecta con la funcion que hace el proceso)
+        Método para descifrar archivos
         """
-        if not self.archivo_seleccionado :
-            messagebox.showerror("Error", "Selecciona archivo  primero.")
+        if not self.archivo_seleccionado:
+            messagebox.showerror("Error", "Seleccione un archivo cifrado primero.")
             return
-        password=self.entry_clave.get()
+
+        password = self.entry_clave.get()
         if not password:
-            messagebox.showerror("Error","Ingrese la clave usada en el cifrado.")
+            messagebox.showerror("Error", "Ingrese la clave usada en el cifrado.")
             return
-        #leer el salt desde el archivo cifrado
-        with open(self.archivo_seleccionado,"rb") as f:
-            contenido=f.read()
-        salt=contenido[:16]
-        datos=contenido[16:]
+
+        # Leer salt desde el archivo cifrado (primeros 16 bytes)
         try:
-            clave_fernet = clave_desde_password(password, salt)
-            datos_descifrados = Fernet(clave_fernet).decrypt(datos)
-        except Exception:
-            messagebox.showerror("Error", "Clave incorrecta o archivo corrupto.")
+            with open(self.archivo_seleccionado, "rb") as f:
+                contenido = f.read()
+            if len(contenido) <= 16:
+                raise ValueError("Archivo demasiado corto o no contiene salt/payload.")
+            salt = contenido[:16]
+            datos = contenido[16:]
+        except (OSError, ValueError) as e:
+            messagebox.showerror("Error", f"No se pudo leer el archivo: {e}")
+            return
+
+        # derivar clave y descifrar
+        clave_fernet = clave_desde_password(password, salt)
+        if not clave_fernet:
+            return
+        try:
+            datos_descifrados = descifrar_archivo_bytes(datos, clave_fernet)
+        except (InvalidToken, ValueError):
+            messagebox.showerror(
+                "Error",
+                "No se pudo descifrar.\nContraseña incorrecta o archivo dañado.",
+            )
             return
 
         ruta_salida = filedialog.asksaveasfilename(
@@ -129,7 +141,6 @@ class VentanaCifrado:
             defaultextension=".dec",
             filetypes=[("Decrypted", "*.dec"), ("Todos", "*.*")],
         )
-
         if ruta_salida:
             with open(ruta_salida, "wb") as f:
                 f.write(datos_descifrados)
