@@ -16,7 +16,7 @@ class VentanaKeys:
     def __init__(self):
         self.root = tk.Toplevel()
         self.root.title("Cifrado Asimétrico RSA")
-        self.root.geometry("400x420")
+        self.root.geometry("400x520")
 
         self.private_key = None
         self.public_key = None
@@ -26,10 +26,17 @@ class VentanaKeys:
 
         tk.Button(self.root, text="Seleccionar Archivo", command=self.seleccionar_archivo).pack(pady=10)
         tk.Button(self.root, text="Generar Claves RSA desde frase", command=self.generar_claves).pack(pady=10)
+
+        # NUEVOS BOTONES QUE FALTABAN
+        tk.Button(self.root, text="Guardar Clave Privada", command=self.guardar_privada).pack(pady=10)
+        tk.Button(self.root, text="Guardar Clave Pública", command=self.guardar_publica).pack(pady=10)
+
         tk.Button(self.root, text="Cargar Clave Privada", command=self.cargar_privada).pack(pady=10)
         tk.Button(self.root, text="Cargar Clave Pública", command=self.cargar_publica).pack(pady=10)
+
         tk.Button(self.root, text="Cifrar Archivo", command=self.cifrar).pack(pady=10)
         tk.Button(self.root, text="Descifrar Archivo", command=self.descifrar).pack(pady=10)
+        
         tk.Button(self.root, text="Cerrar", command=self.root.destroy).pack(pady=20)
 
     def seleccionar_archivo(self):
@@ -46,6 +53,33 @@ class VentanaKeys:
 
         self.private_key, self.public_key = generar_claves_rsa(frase)
         messagebox.showinfo("Éxito", "Claves generadas correctamente.")
+
+    # NUEVOS MÉTODOS: GUARDAR CLAVES
+    def guardar_privada(self):
+        if not self.private_key:
+            messagebox.showerror("Error", "Primero genera las claves.")
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".pem",
+            filetypes=[("Clave privada", "*.pem"), ("Todos", "*.*")]
+        )
+        if ruta:
+            guardar_clave_privada(self.private_key, ruta)
+            messagebox.showinfo("Éxito", f"Clave privada guardada en:\n{ruta}")
+
+    def guardar_publica(self):
+        if not self.public_key:
+            messagebox.showerror("Error", "Primero genera las claves.")
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".pem",
+            filetypes=[("Clave pública", "*.pem"), ("Todos", "*.*")]
+        )
+        if ruta:
+            guardar_clave_publica(self.public_key, ruta)
+            messagebox.showinfo("Éxito", f"Clave pública guardada en:\n{ruta}")
 
     def cargar_privada(self):
         ruta = filedialog.askopenfilename()
