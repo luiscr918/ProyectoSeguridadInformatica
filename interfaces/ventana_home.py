@@ -3,7 +3,7 @@
 import tkinter as tk
 from interfaces.ventana_cifrado import VentanaCifrado
 from interfaces.ventana_keys import VentanaKeys
-
+from interfaces.ventana_integridad import VentanaIntegridad
 
 class VentanaHome:
     """
@@ -28,6 +28,10 @@ class VentanaHome:
             root, text="Generar Keys", width=20, command=self.abrir_keys
         )
         btn_cifrado.pack(pady=10)
+        tk.Button(
+            root, text="Verificar Integridad (SHA256/MD5)", width=25,
+            command=self.abrir_integridad
+        ).pack(pady=10)
 
     # Metodos:
     def abrir_cifrado(self):
@@ -41,3 +45,6 @@ class VentanaHome:
         Metodo para abrir la ventana keys
         """
         VentanaKeys()
+    def abrir_integridad(self):
+
+        VentanaIntegridad()
