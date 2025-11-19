@@ -1,13 +1,22 @@
 """Aqui estan todos los metodos para poder encriptar"""
 
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+import base64 
+import os
 
-
-def generar_clave():
+def clave_desde_password(password:str,salt:bytes)-> bytes:
     """
-    Genera y devuelve una clave Fernet(AES 128 en CBS + HMAC)
+    Deriva una clave Fernet válida desde una contraseña escrita por el usuario
     """
-    return Fernet.generate_key()
+    kdf= PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32, #tamaño requerido por Fernet
+        salt=salt,
+        iterations=390000,
+    )
+    return base64.urlsafe_b64decode(kdf.derive(password.encode()))
 
 
 def cifrar_archivo(ruta_archivo, clave):
@@ -22,8 +31,7 @@ def cifrar_archivo(ruta_archivo, clave):
         datos = f.read()
 
     # cifrar
-    datos_cifrados = fernet.encrypt(datos)
-    return datos_cifrados
+    return fernet.encrypt(datos)
 
 
 def descifrar_archivo(ruta_archivo, clave):
@@ -36,5 +44,4 @@ def descifrar_archivo(ruta_archivo, clave):
     with open(ruta_archivo, "rb") as f:
         datos = f.read()
 
-    datos_descifrados = fernet.decrypt(datos)
-    return datos_descifrados
+    return fernet.decrypt(datos)

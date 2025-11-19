@@ -2,7 +2,7 @@
 
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from functions.cifrado_simetrico import generar_clave, cifrar_archivo, descifrar_archivo
+from functions.cifrado_simetrico import clave_desde_password, cifrar_archivo, descifrar_archivo
 
 
 class VentanaCifrado:
@@ -27,11 +27,14 @@ class VentanaCifrado:
             self.root, text="Seleccionar Archivo", command=self.seleccionar_archivo
         )
         btn_sel.pack(pady=10)
-        # Botón generar clave
-        btn_clave = tk.Button(
-            self.root, text="Generar Clave", command=self.generar_clave_ui
-        )
-        btn_clave.pack(pady=10)
+        # Entrada clave
+        tk.Label(self.root, text="Ingrese su clave o contraseña:").pack()
+        self.entry_clave = tk.Entry(self.root, width=40, show="*")
+        self.entry_clave.pack(pady=5)
+        # Mostrar salt generado
+        tk.Label(self.root, text="Salt (automático):").pack()
+        self.entry_salt = tk.Entry(self.root, width=40)
+        self.entry_salt.pack(pady=5)
 
         # Botón cifrar
         btn_cifrar = tk.Button(self.root, text="Cifrar Archivo", command=self.cifrar_ui)
@@ -57,12 +60,22 @@ class VentanaCifrado:
             self.archivo_seleccionado = ruta
             messagebox.showinfo("Archivo", f"Archivo seleccionado:\n{ruta}")
 
-    def generar_clave_ui(self):
+    def obtener_clave_derivada(self):
         """
         Metodo para generar clave del cifrado(se conecta con la funcion que hace el proceso)
         """
-        self.clave = generar_clave()
-        messagebox.showinfo("Clave generada", "Se generó una nueva clave Fernet.")
+        password=self.entry_clave.get()
+        
+        if not password:
+            messagebox.showerror("Error","Debe ingresar una clave primero.")
+            return None
+        #salt
+        if not self.salt:
+            self.salt= os.urandom(16)
+            self.entry_salt.delete(0, tk.END)
+            self.entry_salt.insert(0, self.salt.hex())
+        return clave_desde_password(password,self.sal)
+
 
     def cifrar_ui(self):
         """
@@ -70,6 +83,9 @@ class VentanaCifrado:
         """
         if not self.archivo_seleccionado or not self.clave:
             messagebox.showerror("Error", "Selecciona archivo y genera clave primero.")
+            return
+        clave=self.obtener_clave_derivada()
+        if not clave:
             return
 
         datos_cifrados = cifrar_archivo(self.archivo_seleccionado, self.clave)
@@ -82,21 +98,30 @@ class VentanaCifrado:
 
         if ruta_salida:
             with open(ruta_salida, "wb") as f:
-                f.write(datos_cifrados)
+                f.write(self.salt + datos_cifrados) #guardaremos en salt el archivo
             messagebox.showinfo("Éxito", "Archivo cifrado guardado correctamente.")
 
     def descifrar_ui(self):
         """
         Metodo para descifrar el  archivo(se conecta con la funcion que hace el proceso)
         """
-        if not self.archivo_seleccionado or not self.clave:
-            messagebox.showerror("Error", "Selecciona archivo y genera clave primero.")
+        if not self.archivo_seleccionado :
+            messagebox.showerror("Error", "Selecciona archivo  primero.")
             return
-
+        password=self.entry_clave.get()
+        if not password:
+            messagebox.showerror("Error","Ingrese la clave usada en el cifrado.")
+            return
+        #leer el salt desde el archivo cifrado
+        with open(self.archivo_seleccionado,"rb") as f:
+            contenido=f.read()
+        salt=contenido[:16]
+        datos=contenido[16:]
         try:
-            datos_descifrados = descifrar_archivo(self.archivo_seleccionado, self.clave)
+            clave_fernet = clave_desde_password(password, salt)
+            datos_descifrados = Fernet(clave_fernet).decrypt(datos)
         except Exception:
-            messagebox.showerror("Error", "No se pudo descifrar. ¿Clave incorrecta?")
+            messagebox.showerror("Error", "Clave incorrecta o archivo corrupto.")
             return
 
         ruta_salida = filedialog.asksaveasfilename(
