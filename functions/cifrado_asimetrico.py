@@ -36,41 +36,4 @@ def guardar_clave_publica(public_key, ruta):
         f.write(pem)
 
 
-def cargar_clave_privada(ruta):
-    with open(ruta, "rb") as f:
-        return serialization.load_pem_private_key(f.read(), password=None)
 
-
-def cargar_clave_publica(ruta):
-    with open(ruta, "rb") as f:
-        return serialization.load_pem_public_key(f.read())
-
-
-def cifrar_archivo_rsa(ruta_archivo, public_key):
-    with open(ruta_archivo, "rb") as f:
-        datos = f.read()
-
-    datos_cifrados = public_key.encrypt(
-        datos,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return datos_cifrados
-
-
-def descifrar_archivo_rsa(ruta_archivo, private_key):
-    with open(ruta_archivo, "rb") as f:
-        datos = f.read()
-
-    datos_descifrados = private_key.decrypt(
-        datos,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return datos_descifrados
