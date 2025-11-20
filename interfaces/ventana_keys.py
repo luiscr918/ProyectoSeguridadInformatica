@@ -5,10 +5,6 @@ from functions.cifrado_asimetrico import (
     generar_claves_rsa,
     guardar_clave_publica,
     guardar_clave_privada,
-    cargar_clave_publica,
-    cargar_clave_privada,
-    cifrar_archivo_rsa,
-    descifrar_archivo_rsa
 )
 
 class VentanaKeys:
@@ -16,27 +12,20 @@ class VentanaKeys:
     def __init__(self):
         self.root = tk.Toplevel()
         self.root.title("Cifrado Asimétrico RSA")
-        self.root.geometry("400x520")
+        self.root.geometry("400x300")
 
         self.private_key = None
         self.public_key = None
         self.archivo = None
 
-        tk.Label(self.root, text="Cifrado Asimétrico RSA", font=("Arial", 16)).pack(pady=10)
-
-        tk.Button(self.root, text="Seleccionar Archivo", command=self.seleccionar_archivo).pack(pady=10)
+        tk.Label(self.root, text="Cifrado Asimétrico RSA", font=("Arial", 16)).pack(pady=10) 
         tk.Button(self.root, text="Generar Claves RSA desde frase", command=self.generar_claves).pack(pady=10)
 
         # NUEVOS BOTONES QUE FALTABAN
         tk.Button(self.root, text="Guardar Clave Privada", command=self.guardar_privada).pack(pady=10)
         tk.Button(self.root, text="Guardar Clave Pública", command=self.guardar_publica).pack(pady=10)
 
-        tk.Button(self.root, text="Cargar Clave Privada", command=self.cargar_privada).pack(pady=10)
-        tk.Button(self.root, text="Cargar Clave Pública", command=self.cargar_publica).pack(pady=10)
-
-        tk.Button(self.root, text="Cifrar Archivo", command=self.cifrar).pack(pady=10)
-        tk.Button(self.root, text="Descifrar Archivo", command=self.descifrar).pack(pady=10)
-        
+       
         tk.Button(self.root, text="Cerrar", command=self.root.destroy).pack(pady=20)
 
     def seleccionar_archivo(self):
