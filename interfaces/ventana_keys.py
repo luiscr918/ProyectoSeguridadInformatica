@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 
 from functions.cifrado_asimetrico import (
-    generar_claves_rsa,
+    generar_claves_pgp,
     guardar_clave_publica,
     guardar_clave_privada,
 )
@@ -35,79 +35,46 @@ class VentanaKeys:
             messagebox.showinfo("Archivo", f"Archivo seleccionado:\n{ruta}")
 
     def generar_claves(self):
-        frase = simpledialog.askstring("Clave", "Escribe una frase para generar las claves:")
-        if not frase:
-            messagebox.showerror("Error", "Debes escribir una frase.")
-            return
+        nombre = simpledialog.askstring("Nombre", "Ingresa tu nombre:")
+        correo = simpledialog.askstring("Correo", "Ingresa tu correo:")
+        passphrase = simpledialog.askstring("Passphrase", "Crea una passphrase:", show="*")
 
-        self.private_key, self.public_key = generar_claves_rsa(frase)
-        messagebox.showinfo("Éxito", "Claves generadas correctamente.")
-
-    # NUEVOS MÉTODOS: GUARDAR CLAVES
-    def guardar_privada(self):
-        if not self.private_key:
-            messagebox.showerror("Error", "Primero genera las claves.")
-            return
-
-        ruta = filedialog.asksaveasfilename(
-            defaultextension=".pem",
-            filetypes=[("Clave privada", "*.pem"), ("Todos", "*.*")]
-        )
-        if ruta:
-            guardar_clave_privada(self.private_key, ruta)
-            messagebox.showinfo("Éxito", f"Clave privada guardada en:\n{ruta}")
-
-    def guardar_publica(self):
-        if not self.public_key:
-            messagebox.showerror("Error", "Primero genera las claves.")
-            return
-
-        ruta = filedialog.asksaveasfilename(
-            defaultextension=".pem",
-            filetypes=[("Clave pública", "*.pem"), ("Todos", "*.*")]
-        )
-        if ruta:
-            guardar_clave_publica(self.public_key, ruta)
-            messagebox.showinfo("Éxito", f"Clave pública guardada en:\n{ruta}")
-
-    def cargar_privada(self):
-        ruta = filedialog.askopenfilename()
-        if ruta:
-            self.private_key = cargar_clave_privada(ruta)
-            messagebox.showinfo("Clave", "Clave privada cargada.")
-
-    def cargar_publica(self):
-        ruta = filedialog.askopenfilename()
-        if ruta:
-            self.public_key = cargar_clave_publica(ruta)
-            messagebox.showinfo("Clave", "Clave pública cargada.")
-
-    def cifrar(self):
-        if not self.archivo or not self.public_key:
-            messagebox.showerror("Error", "Selecciona archivo y clave pública.")
-            return
-
-        datos = cifrar_archivo_rsa(self.archivo, self.public_key)
-
-        salida = filedialog.asksaveasfilename(defaultextension=".rsa")
-        if salida:
-            with open(salida, "wb") as f:
-                f.write(datos)
-            messagebox.showinfo("Éxito", "Archivo cifrado.")
-
-    def descifrar(self):
-        if not self.archivo or not self.private_key:
-            messagebox.showerror("Error", "Selecciona archivo y clave privada.")
+        if not nombre or not correo or not passphrase:
+            messagebox.showerror("Error", "Todos los campos son obligatorios.")
             return
 
         try:
-            datos = descifrar_archivo_rsa(self.archivo, self.private_key)
-        except:
-            messagebox.showerror("Error", "No se pudo descifrar.")
+            self.fingerprint = generar_claves_pgp(nombre, correo, passphrase)
+            self.passphrase = passphrase
+            messagebox.showinfo("Éxito", "Claves PGP generadas correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    # NUEVOS MÉTODOS: GUARDAR CLAVES
+    def guardar_privada(self):
+        if not hasattr(self, "fingerprint"):
+            messagebox.showerror("Error", "Primero genera las claves.")
             return
 
-        salida = filedialog.asksaveasfilename(defaultextension=".dec")
-        if salida:
-            with open(salida, "wb") as f:
-                f.write(datos)
-            messagebox.showinfo("Éxito", "Archivo descifrado.")
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".asc",
+            filetypes=[("PGP Private Key", "*.asc"), ("Todos", "*.*")]
+        )
+        if ruta:
+            guardar_clave_privada(self.fingerprint, ruta, self.passphrase)
+            messagebox.showinfo("Éxito", f"Clave privada guardada en:\n{ruta}")
+
+    def guardar_publica(self):
+        if not hasattr(self, "fingerprint"):
+            messagebox.showerror("Error", "Primero genera las claves.")
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".asc",
+            filetypes=[("PGP Public Key", "*.asc"), ("Todos", "*.*")]
+        )
+        if ruta:
+            guardar_clave_publica(self.fingerprint, ruta)
+            messagebox.showinfo("Éxito", f"Clave pública guardada en:\n{ruta}")
+
+
