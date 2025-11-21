@@ -29,6 +29,7 @@ class VentanaHome:
         )
         btn_cifrado.pack(pady=10)
 
+
     # Metodos:
     def abrir_cifrado(self):
         """
@@ -41,3 +42,4 @@ class VentanaHome:
         Metodo para abrir la ventana keys
         """
         VentanaKeys()
+ 
